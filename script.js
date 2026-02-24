@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// TODO: Replace this with your actual Firebase config later
+// PASTE YOUR FIREBASE CONFIGURATION HERE
 const firebaseConfig = {
   apiKey: "AIzaSyDJTX2FXoNbsJvoLoYmgDtXzYsKem4rYWE",
   authDomain: "goainitiative.firebaseapp.com",
@@ -29,107 +29,101 @@ const newGameBtn = document.getElementById('new-game-btn');
 
 let currentSeat = null;
 let globalState = null;
-let amIReady = false;
 
-// 1. Calculate Local Total
-[cardInitInput, boosterInput].forEach(el => {
-    el.addEventListener('input', () => {
-        totalDisp.innerText = parseInt(cardInitInput.value || 0) + parseInt(boosterInput.value || 0);
-    });
-});
+// Handle Local Initiative Calculation
+const updateLocalTotal = () => {
+    const total = parseInt(cardInitInput.value || 0) + parseInt(boosterInput.value || 0);
+    totalDisp.innerText = total;
+};
+[cardInitInput, boosterInput].forEach(el => el.addEventListener('input', updateLocalTotal));
 
-// 2. Handle Seat Selection (Saves to local storage so it remembers on refresh)
+// Handle Seat Selection & Persistence
 playerSelect.addEventListener('change', (e) => {
     currentSeat = e.target.value;
-    localStorage.setItem('guardianSeat', currentSeat);
-    checkMyReadyState();
+    localStorage.setItem('atlantis_seat', currentSeat);
+    syncUIWithState();
 });
 
-// Restore seat on load
-const savedSeat = localStorage.getItem('guardianSeat');
+const savedSeat = localStorage.getItem('atlantis_seat');
 if (savedSeat) {
     playerSelect.value = savedSeat;
     currentSeat = savedSeat;
 }
 
-// 3. Sync from Firebase
+// Global Sync from Firebase
 onValue(ref(db, 'game'), (snapshot) => {
-    const data = snapshot.val();
-    if (!data) return;
-    globalState = data;
-    
-    // Update Coin
-    coinDisplay.className = `coin ${data.coin}`;
-    coinDisplay.innerText = `${data.coin.toUpperCase()} TIE-BREAKER`;
-
-    checkMyReadyState();
+    globalState = snapshot.val();
+    if (!globalState) {
+        initializeNewGame(); // Auto-init if DB is empty
+        return;
+    }
     renderPublicBoard();
+    syncUIWithState();
 });
 
-function checkMyReadyState() {
+// Updates the Private Side UI based on what's in the Database
+function syncUIWithState() {
     if (!currentSeat || !globalState?.players?.[currentSeat]) return;
-    amIReady = globalState.players[currentSeat].isReady;
+    const p = globalState.players[currentSeat];
     
-    if (amIReady) {
+    // Toggle Ready Button Style
+    if (p.isReady) {
         readyBtn.innerText = "READIED UP!";
         readyBtn.classList.add('ready-active');
     } else {
         readyBtn.innerText = "READY UP";
         readyBtn.classList.remove('ready-active');
     }
+
+    // Update Coin Visual
+    coinDisplay.className = `coin ${globalState.coin}`;
+    coinDisplay.innerText = `${globalState.coin.toUpperCase()} TIE-BREAKER`;
 }
 
-// 4. Ready Up Action
+// Ready Up Action
 readyBtn.addEventListener('click', () => {
     if (!currentSeat) {
-        alert("Please select your Guardian Seat first!");
+        alert("Select your Player Number first!");
         return;
     }
 
-    const team = ['p1', 'p2', 'p3'].includes(currentSeat) ? 'red' : 'blue';
+    const isCurrentlyReady = globalState.players[currentSeat].isReady;
     const total = parseInt(cardInitInput.value || 0) + parseInt(boosterInput.value || 0);
-
-    // Toggle ready state
-    amIReady = !amIReady;
 
     update(ref(db, `game/players/${currentSeat}`), {
         name: nameInput.value || `Guardian ${currentSeat.replace('p', '')}`,
-        team: team,
         cardInit: parseInt(cardInitInput.value || 0),
         booster: parseInt(boosterInput.value || 0),
         level: parseInt(levelInput.value || 1),
         totalInit: total,
-        isReady: amIReady
+        isReady: !isCurrentlyReady
     });
 });
 
-// 5. Render the Public Board
+// The Oracle: Rendering the Public Board
 function renderPublicBoard() {
-    if (!globalState || !globalState.players) return;
-
-    const players = Object.values(globalState.players);
-    const allReady = players.length === 6 && players.every(p => p.isReady);
-
+    const playersArr = Object.values(globalState.players);
+    const allReady = playersArr.every(p => p.isReady);
     publicBoard.innerHTML = "";
 
     if (!allReady) {
-        // Show Waiting List
-        players.forEach((p, i) => {
+        // LOBBY MODE: List 1-6 in order
+        for (let i = 1; i <= 6; i++) {
+            const p = globalState.players[`p${i}`];
             const div = document.createElement('div');
             div.className = `status-row ${p.team}`;
             div.innerHTML = `
-                <span>${p.name || `Player ${i+1}`} (Lvl ${p.level})</span>
+                <span>${p.name} (Lvl ${p.level})</span>
                 <span class="${p.isReady ? 'status-ready' : 'status-waiting'}">
-                    ${p.isReady ? 'Readied' : 'Thinking...'}
+                    ${p.isReady ? 'READY' : '...'}
                 </span>
             `;
             publicBoard.appendChild(div);
-        });
+        }
     } else {
-        // EVERYONE IS READY: Calculate and show order
-        const orderedTurn = calculateTurnOrder(players, globalState.coin);
-        
-        orderedTurn.forEach((slot, index) => {
+        // REVEAL MODE: Calculated Order
+        const ordered = calculateTurnOrder(playersArr, globalState.coin);
+        ordered.forEach((slot, index) => {
             const div = document.createElement('div');
             div.className = `status-row ${slot.team}`;
             div.innerHTML = `
@@ -141,8 +135,8 @@ function renderPublicBoard() {
     }
 }
 
-// 6. The Interleaving Tie-Breaker Algorithm
-function calculateTurnOrder(players, currentCoin) {
+// Tie-Breaker Logic
+function calculateTurnOrder(players, initialCoin) {
     let grouped = {};
     players.forEach(p => {
         if(!grouped[p.totalInit]) grouped[p.totalInit] = { red: [], blue: [] };
@@ -151,54 +145,51 @@ function calculateTurnOrder(players, currentCoin) {
     
     let sortedTotals = Object.keys(grouped).map(Number).sort((a,b) => b-a);
     let finalOrder = [];
-    let tempCoin = currentCoin;
+    let tempCoin = initialCoin;
     
     sortedTotals.forEach(total => {
-        let reds = grouped[total].red;
-        let blues = grouped[total].blue;
+        let reds = [...grouped[total].red];
+        let blues = [...grouped[total].blue];
         
-        // Format names for same-team ties (e.g., "Player 1 OR Player 2")
-        let redNameFormat = reds.map(p => p.name).join(" OR ");
-        let redLevelFormat = reds.map(p => p.level).join("/");
-        let blueNameFormat = blues.map(p => p.name).join(" OR ");
-        let blueLevelFormat = blues.map(p => p.level).join("/");
-
-        let remainingReds = reds.length;
-        let remainingBlues = blues.length;
-
-        while(remainingReds > 0 || remainingBlues > 0) {
-            if (remainingReds > 0 && remainingBlues > 0) {
-                // Opposing teams tied! Team with coin goes, then coin flips.
+        while(reds.length > 0 || blues.length > 0) {
+            if (reds.length > 0 && blues.length > 0) {
+                // Opposing tie!
                 if (tempCoin === 'red') {
-                    finalOrder.push({ name: redNameFormat, team: 'red', total: total, level: redLevelFormat });
-                    remainingReds--;
+                    finalOrder.push(formatEntry(reds, 'red', total));
+                    reds = []; // Consume all teammates for this spot
                     tempCoin = 'blue';
                 } else {
-                    finalOrder.push({ name: blueNameFormat, team: 'blue', total: total, level: blueLevelFormat });
-                    remainingBlues--;
+                    finalOrder.push(formatEntry(blues, 'blue', total));
+                    blues = [];
                     tempCoin = 'red';
                 }
-            } else if (remainingReds > 0) {
-                finalOrder.push({ name: redNameFormat, team: 'red', total: total, level: redLevelFormat });
-                remainingReds--;
-            } else if (remainingBlues > 0) {
-                finalOrder.push({ name: blueNameFormat, team: 'blue', total: total, level: blueLevelFormat });
-                remainingBlues--;
+            } else if (reds.length > 0) {
+                finalOrder.push(formatEntry(reds, 'red', total));
+                reds = [];
+            } else {
+                finalOrder.push(formatEntry(blues, 'blue', total));
+                blues = [];
             }
         }
     });
-    
     return finalOrder;
 }
 
-// 7. New Game Reset
-newGameBtn.addEventListener('click', () => {
-    if(!confirm("Reset the entire game for everyone?")) return;
-    
-    const initialPlayers = {};
+function formatEntry(playerSubGroup, team, total) {
+    return {
+        name: playerSubGroup.map(p => p.name).join(" OR "),
+        level: playerSubGroup.map(p => p.level).join("/"),
+        team: team,
+        total: total
+    };
+}
+
+// Reset Game Function
+const initializeNewGame = () => {
+    const players = {};
     for(let i=1; i<=6; i++) {
-        initialPlayers[`p${i}`] = {
-            name: `Player ${i}`,
+        players[`p${i}`] = {
+            name: `Guardian ${i}`,
             team: i <= 3 ? 'red' : 'blue',
             cardInit: 0,
             booster: 0,
@@ -207,16 +198,14 @@ newGameBtn.addEventListener('click', () => {
             isReady: false
         };
     }
-
     set(ref(db, 'game'), {
         coin: Math.random() > 0.5 ? 'red' : 'blue',
-        players: initialPlayers
+        players: players
     });
+};
 
-    // Reset local inputs
-    cardInitInput.value = 0;
-    boosterInput.value = 0;
-    levelInput.value = 1;
-    totalDisp.innerText = 0;
+newGameBtn.addEventListener('click', () => {
+    if(confirm("Reset New Game? All initiatives and levels will be cleared.")) {
+        initializeNewGame();
+    }
 });
-
