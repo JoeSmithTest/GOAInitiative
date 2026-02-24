@@ -3,19 +3,18 @@ const playersRef = db.ref("players");
 const coinRef = db.ref("coin");
 
 // DOM elements
+const playerSlotInput = document.getElementById("playerSlot");
 const playerNameInput = document.getElementById("playerName");
-const playerTeamInput = document.getElementById("playerTeam");
 const playerLevelInput = document.getElementById("playerLevel");
 const playerBoosterInput = document.getElementById("playerBooster");
 const playerCardInput = document.getElementById("playerCard");
 const readyButton = document.getElementById("readyButton");
+const newGameButton = document.getElementById("newGameButton");
 const privateMessage = document.getElementById("privateMessage");
-const playerNumberEl = document.getElementById("playerNumber");
 const turnOrderList = document.getElementById("turnOrderList");
 const coinDiv = document.getElementById("coin");
 const coinLabel = document.getElementById("coinLabel");
 
-let playerId = null;
 let coinSide = "red";
 let coinHistory = [];
 
@@ -56,72 +55,59 @@ function initializePlayers() {
 }
 initializePlayers();
 
-// Assign player slot and number
-playersRef.once("value", snapshot => {
-    const data = snapshot.val() || {};
-    const teamCounts = { red: 0, blue: 0 };
-
-    Object.values(data).forEach(p => {
-        if (p.team === "red") teamCounts.red++;
-        else if (p.team === "blue") teamCounts.blue++;
-    });
-
-    let teamSelected = playerTeamInput.value;
-    if (teamCounts[teamSelected] >= 3) {
-        privateMessage.textContent = `${teamSelected.toUpperCase()} team full! Choose the other team.`;
-        readyButton.disabled = true;
-        return;
-    }
-
-    for (let i = 0; i < 6; i++) {
-        if (!data[i]) {
-            playerId = i;
-            break;
-        }
-    }
-
-    if (playerId === null) {
-        privateMessage.textContent = "All player slots are full!";
-        readyButton.disabled = true;
-        return;
-    }
-
-    playerNumberEl.textContent = `Your Player Number: ${playerId+1}`;
-});
-
-// Ready button logic
+// Ready button logic (player can choose slot anytime)
 readyButton.addEventListener("click", () => {
-    if (playerId === null) return;
+    const playerId = parseInt(playerSlotInput.value);
+    const assignedTeam = (playerId < 3) ? "red" : "blue";
+
     playersRef.child(playerId).set({
         name: playerNameInput.value || `Player${playerId+1}`,
-        team: playerTeamInput.value,
+        team: assignedTeam,
         level: parseInt(playerLevelInput.value) || 1,
         booster: parseInt(playerBoosterInput.value) || 0,
         card: parseInt(playerCardInput.value) || 0,
         ready: true,
         slot: playerId
     });
-    privateMessage.textContent = "You are ready!";
+
+    privateMessage.textContent = `You are Player ${playerId+1} on ${assignedTeam.toUpperCase()} team. Ready!`;
+});
+
+// New Game button logic
+newGameButton.addEventListener("click", () => {
+    playersRef.once("value", snapshot => {
+        const data = snapshot.val() || {};
+        for (let i = 0; i < 6; i++) {
+            if (data[i]) {
+                playersRef.child(i).update({
+                    card: 0,
+                    ready: false,
+                    level: 1
+                });
+            }
+        }
+    });
+    coinRef.set({ side: "red", history: ["red"] });
 });
 
 // Listen to all players and update public section
 playersRef.on("value", snapshot => {
     const data = snapshot.val() || {};
-    const playersArray = Object.values(data);
-    playersArray.sort((a,b) => a.slot - b.slot);
+    const playersArray = Object.values(data).sort((a,b) => a.slot - b.slot);
 
     turnOrderList.innerHTML = "";
     let allReady = true;
 
+    // Show public list with level and ready status
     playersArray.forEach(p => {
         const li = document.createElement("li");
-        li.textContent = `Player ${p.slot+1}: ${p.name} (${p.team.toUpperCase()}) - ${p.ready ? "Ready ✅" : "Waiting ⏳"}`;
+        li.textContent = `Player ${p.slot+1}: ${p.name} (Team ${p.team.toUpperCase()}, Level ${p.level}) - ${p.ready ? "Ready ✅" : "Waiting ⏳"}`;
         li.style.color = p.team;
         turnOrderList.appendChild(li);
-
         if (!p.ready) allReady = false;
     });
 
+    // Calculate turn order if all ready
     if (allReady && playersArray.length > 0) {
         calculateTurnOrder(playersArray);
     }
@@ -161,7 +147,7 @@ function calculateTurnOrder(playersArray) {
         i = j;
     }
 
-    // Update public section with turn numbers
+    // Update public section with turn numbers and levels
     turnOrderList.innerHTML = "";
     finalOrder.forEach((p,index) => {
         const li = document.createElement("li");
