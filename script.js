@@ -15,7 +15,7 @@ const playersRef = db.ref("players");
 const coinRef = db.ref("coin");
 
 // Global variables
-let playerSlot = 0;
+let playerSlot = null;  // no default
 let coinSide = "red";
 let coinHistory = [];
 const turnOrderList = document.getElementById("turnOrderList");
@@ -37,6 +37,13 @@ playersRef.once("value", snapshot => {
 function updatePlayerDropdown() {
     const dropdown = document.getElementById("playerSlot");
     dropdown.innerHTML = "";
+
+    // Default "Choose Player" option
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "-- Choose Player --";
+    dropdown.appendChild(defaultOption);
+
     playersRef.once("value", snapshot=>{
         const data = snapshot.val() || {};
         for(let i=0;i<6;i++){
@@ -51,7 +58,9 @@ function updatePlayerDropdown() {
 
 // Player slot selection
 document.getElementById("playerSlot").addEventListener("change", e=>{
+    if(e.target.value==="") return; // no player selected yet
     playerSlot = parseInt(e.target.value);
+
     playersRef.child(playerSlot).once("value").then(snapshot=>{
         const p = snapshot.val();
         document.getElementById("playerName").value = p.name;
@@ -63,14 +72,13 @@ document.getElementById("playerSlot").addEventListener("change", e=>{
 
 // Ready button
 document.getElementById("readyButton").addEventListener("click", ()=>{
+    if(playerSlot===null) return alert("Please select your player first!");
     const name = document.getElementById("playerName").value || `Player${playerSlot+1}`;
     const level = parseInt(document.getElementById("playerLevel").value) || 1;
     const booster = parseInt(document.getElementById("initiativeBooster").value) || 0;
     const card = parseInt(document.getElementById("cardInitiative").value) || 0;
 
     playersRef.child(playerSlot).update({ name, level, booster, card, ready:true });
-
-    // Update public ready status
     updatePublicStatus();
 });
 
@@ -98,8 +106,7 @@ function updatePublicStatus(){
         turnOrderList.innerHTML = "";
 
         // Show coin and ready status
-        const coinDiv = document.getElementById("coinLabel");
-        coinDiv.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
+        coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
 
         // Show all players with ready/waiting if not all ready
         if(!allReady){
@@ -111,7 +118,6 @@ function updatePublicStatus(){
                 turnOrderList.appendChild(li);
             });
         } else {
-            // All ready → calculate turn order
             calculateTurnOrder(Object.values(data));
         }
     });
@@ -151,7 +157,7 @@ function calculateTurnOrder(playersArray){
         i=j;
     }
 
-    // Display turn order
+    // Display turn order top-to-bottom with ordinals
     turnOrderList.innerHTML="";
     finalOrder.forEach((p,index)=>{
         const li=document.createElement("li");
@@ -184,6 +190,6 @@ coinRef.on("value", snapshot=>{
     if(coinData){
         coinSide=coinData.side;
         coinHistory=coinData.history||[coinSide];
-        document.getElementById("coinLabel").textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
+        coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
     }
 });
