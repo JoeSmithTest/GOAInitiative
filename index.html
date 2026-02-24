@@ -1,74 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOA Initiative Tracker</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script>
-      // Firebase config — replace YOUR_ values
-      const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "GOAInitiative.firebaseapp.com",
-        databaseURL: "https://GOAInitiative-default-rtdb.firebaseio.com",
-        projectId: "GOAInitiative",
-        storageBucket: "GOAInitiative.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOA Initiative Tracker</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
-    <h1>Guardians of Atlantis Initiative Tracker</h1>
+<h1>Guardians of Atlantis Initiative Tracker</h1>
 
-    <!-- Private Input Section -->
-    <div id="privateSection">
-        <h2>Your Info</h2>
+<div id="privateSection">
+    <h2>Private Section</h2>
+    <label for="playerSlot">Select Your Player:</label>
+    <select id="playerSlot"></select>
+    <br>
+    <label for="playerName">Name:</label>
+    <input type="text" id="playerName">
+    <br>
+    <label for="playerLevel">Current Level:</label>
+    <input type="number" id="playerLevel" min="1" value="1">
+    <p>To level up to the next level, it will cost the amount of your current level. E.g. Cost 3 coins to go from level 3 to 4.</p>
+    <label for="initiativeBooster">Initiative Booster:</label>
+    <input type="number" id="initiativeBooster" min="0" value="0">
+    <br>
+    <label for="cardInitiative">Current Card Initiative:</label>
+    <input type="number" id="cardInitiative" min="0" value="0">
+    <br>
+    <button id="readyButton">Ready</button>
+</div>
 
-        <label for="playerSlot">Select Your Player Number:</label>
-        <select id="playerSlot">
-            <option value="0">Player 1</option>
-            <option value="1">Player 2</option>
-            <option value="2">Player 3</option>
-            <option value="3">Player 4</option>
-            <option value="4">Player 5</option>
-            <option value="5">Player 6</option>
-        </select>
-        <small>Team is assigned automatically based on player number.</small><br>
-
-        <label for="playerName">Name:</label>
-        <input type="text" id="playerName" placeholder="Your character name"><br>
-
-        <label for="playerLevel">Level:</label>
-        <input type="number" id="playerLevel" min="1" value="1"><br>
-        <small>To level up to the next level, it costs the amount of your current level. E.g. Cost 3 coins to go from level 3 to 4.</small><br>
-
-        <label for="playerBooster">Initiative Booster:</label>
-        <input type="number" id="playerBooster" min="0" value="0"><br>
-
-        <label for="playerCard">Current Card Initiative:</label>
-        <input type="number" id="playerCard" min="0" value="0"><br>
-
-        <button id="readyButton">Ready</button>
-        <button id="newGameButton">Start New Game</button>
-        <p id="privateMessage"></p>
+<div id="publicSection">
+    <h2>Public Turn Order</h2>
+    <div id="coinDiv">
+        <span id="coinLabel"></span>
     </div>
+    <ul id="turnOrderList"></ul>
+</div>
 
-    <!-- Public Turn Order Section -->
-    <div id="publicSection">
-        <h2>Turn Order / Player Status</h2>
-        <div id="coinContainer">
-            <span id="coinLabel">Tie-breaker Coin:</span>
-            <div id="coin"></div>
-        </div>
-        <ul id="turnOrderList"></ul>
-    </div>
+<button id="newGameButton">Start New Game</button>
 
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
