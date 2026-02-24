@@ -11,10 +11,16 @@
     <div class="app-container">
         <section class="public-section">
             <h2 class="section-title">The Oracle's Vision</h2>
-            <div id="coin-display" class="coin">DETERMINING COIN...</div>
+            
+            <div id="coin-container">
+                <div id="visual-coin" class="coin-graphic"></div>
+                <div id="coin-text">TIE-BREAKER POSSESSION</div>
+            </div>
             
             <div id="public-board">
                 </div>
+
+            <div id="battle-log"></div>
 
             <button id="new-game-btn" class="danger-btn">RESET NEW GAME</button>
         </section>
@@ -27,7 +33,7 @@
             <div class="input-group">
                 <label>Guardian Seat</label>
                 <select id="player-select">
-                    <option value="" disabled selected>Select Player Number...</option>
+                    <option value="" disabled selected>Choose Seat...</option>
                     <option value="p1">Player 1 (Red)</option>
                     <option value="p2">Player 2 (Red)</option>
                     <option value="p3">Player 3 (Red)</option>
