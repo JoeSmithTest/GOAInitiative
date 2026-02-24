@@ -1,171 +1,221 @@
-// Firebase setup
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// TODO: Replace this with your actual Firebase config later
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const playersRef = db.ref("players");
-const coinRef = db.ref("coin");
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-// Global variables
-let playerSlot = null;
-let coinSide = "red";
-let coinHistory = [];
-const turnOrderList = document.getElementById("turnOrderList");
-const coinLabel = document.getElementById("coinLabel");
-const dropdown = document.getElementById("playerSlot");
+// DOM Elements
+const coinDisplay = document.getElementById('coin-display');
+const publicBoard = document.getElementById('public-board');
+const playerSelect = document.getElementById('player-select');
+const nameInput = document.getElementById('player-name');
+const cardInitInput = document.getElementById('card-init');
+const boosterInput = document.getElementById('booster');
+const levelInput = document.getElementById('level');
+const totalDisp = document.getElementById('total-val');
+const readyBtn = document.getElementById('ready-btn');
+const newGameBtn = document.getElementById('new-game-btn');
 
-// Initialize players if not exist
-playersRef.once("value").then(snapshot => {
-    if (!snapshot.exists()) {
-        const initialPlayers = {};
-        for (let i = 0; i < 6; i++) {
-            initialPlayers[i] = { name: `Player${i+1}`, team: i < 3 ? "red" : "blue", level: 1, booster: 0, card: 0, ready: false, slot: i };
-        }
-        playersRef.set(initialPlayers);
-    }
-}).finally(() => {
-    // Enable dropdown after Firebase confirms players
-    dropdown.disabled = false;
-});
+let currentSeat = null;
+let globalState = null;
+let amIReady = false;
 
-// Load saved info when player selects slot
-dropdown.addEventListener("change", e => {
-    if (e.target.value === "") return;
-    playerSlot = parseInt(e.target.value);
-
-    playersRef.child(playerSlot).once("value").then(snapshot => {
-        const p = snapshot.val();
-        if (!p) return;
-        document.getElementById("playerName").value = p.name;
-        document.getElementById("playerLevel").value = p.level;
-        document.getElementById("initiativeBooster").value = p.booster;
-        document.getElementById("cardInitiative").value = p.card;
+// 1. Calculate Local Total
+[cardInitInput, boosterInput].forEach(el => {
+    el.addEventListener('input', () => {
+        totalDisp.innerText = parseInt(cardInitInput.value || 0) + parseInt(boosterInput.value || 0);
     });
 });
 
-// Ready button
-document.getElementById("readyButton").addEventListener("click", () => {
-    if (playerSlot === null) return alert("Please select your player first!");
-    const name = document.getElementById("playerName").value || `Player${playerSlot + 1}`;
-    const level = parseInt(document.getElementById("playerLevel").value) || 1;
-    const booster = parseInt(document.getElementById("initiativeBooster").value) || 0;
-    const card = parseInt(document.getElementById("cardInitiative").value) || 0;
-
-    playersRef.child(playerSlot).update({ name, level, booster, card, ready: true });
-    updatePublicStatus();
+// 2. Handle Seat Selection (Saves to local storage so it remembers on refresh)
+playerSelect.addEventListener('change', (e) => {
+    currentSeat = e.target.value;
+    localStorage.setItem('guardianSeat', currentSeat);
+    checkMyReadyState();
 });
 
-// New Game
-document.getElementById("newGameButton").addEventListener("click", () => {
-    coinSide = Math.random() < 0.5 ? "red" : "blue";
-    coinHistory = [coinSide];
-    coinRef.set({ side: coinSide, history: coinHistory });
-
-    playersRef.once("value").then(snapshot => {
-        for (let i = 0; i < 6; i++) {
-            playersRef.child(i).update({ card: 0, level: 1, ready: false });
-        }
-    });
-    updatePublicStatus();
-});
-
-// Update public section
-function updatePublicStatus() {
-    playersRef.once("value").then(snapshot => {
-        const data = snapshot.val() || {};
-        const allReady = Object.values(data).every(p => p.ready);
-        turnOrderList.innerHTML = "";
-
-        // Show coin and history
-        coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
-
-        if (!allReady) {
-            Object.values(data).forEach(p => {
-                const li = document.createElement("li");
-                li.textContent = `Player ${p.slot + 1} - ${p.name} (Level ${p.level}) - ${p.ready ? "Ready ✅" : "Waiting ⏳"}`;
-                li.style.color = p.team === "red" ? "#ff4d4d" : "#66ccff";
-                li.setAttribute("data-team", p.team);
-                turnOrderList.appendChild(li);
-            });
-        } else {
-            calculateTurnOrder(Object.values(data));
-        }
-    });
+// Restore seat on load
+const savedSeat = localStorage.getItem('guardianSeat');
+if (savedSeat) {
+    playerSelect.value = savedSeat;
+    currentSeat = savedSeat;
 }
 
-// Calculate turn order with tie-breaker
-function calculateTurnOrder(playersArray) {
-    playersArray.forEach(p => p.total = (p.card || 0) + (p.booster || 0));
-    playersArray.sort((a, b) => b.total - a.total);
+// 3. Sync from Firebase
+onValue(ref(db, 'game'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    globalState = data;
+    
+    // Update Coin
+    coinDisplay.className = `coin ${data.coin}`;
+    coinDisplay.innerText = `${data.coin.toUpperCase()} TIE-BREAKER`;
 
-    const finalOrder = [];
-    let i = 0;
-    while (i < playersArray.length) {
-        let tieGroup = [playersArray[i]];
-        let j = i + 1;
-        while (j < playersArray.length && playersArray[j].total === playersArray[i].total) {
-            tieGroup.push(playersArray[j]);
-            j++;
-        }
+    checkMyReadyState();
+    renderPublicBoard();
+});
 
-        const teams = new Set(tieGroup.map(p => p.team));
-        if (teams.size === 1) {
-            tieGroup.forEach(p => finalOrder.push(p));
-        } else {
-            const redPlayers = tieGroup.filter(p => p.team === "red");
-            const bluePlayers = tieGroup.filter(p => p.team === "blue");
+function checkMyReadyState() {
+    if (!currentSeat || !globalState?.players?.[currentSeat]) return;
+    amIReady = globalState.players[currentSeat].isReady;
+    
+    if (amIReady) {
+        readyBtn.innerText = "READIED UP!";
+        readyBtn.classList.add('ready-active');
+    } else {
+        readyBtn.innerText = "READY UP";
+        readyBtn.classList.remove('ready-active');
+    }
+}
 
-            if (coinSide === "red") {
-                redPlayers.forEach(p => finalOrder.push(p));
-                bluePlayers.forEach(p => finalOrder.push(p));
-            } else {
-                bluePlayers.forEach(p => finalOrder.push(p));
-                redPlayers.forEach(p => finalOrder.push(p));
+// 4. Ready Up Action
+readyBtn.addEventListener('click', () => {
+    if (!currentSeat) {
+        alert("Please select your Guardian Seat first!");
+        return;
+    }
+
+    const team = ['p1', 'p2', 'p3'].includes(currentSeat) ? 'red' : 'blue';
+    const total = parseInt(cardInitInput.value || 0) + parseInt(boosterInput.value || 0);
+
+    // Toggle ready state
+    amIReady = !amIReady;
+
+    update(ref(db, `game/players/${currentSeat}`), {
+        name: nameInput.value || `Guardian ${currentSeat.replace('p', '')}`,
+        team: team,
+        cardInit: parseInt(cardInitInput.value || 0),
+        booster: parseInt(boosterInput.value || 0),
+        level: parseInt(levelInput.value || 1),
+        totalInit: total,
+        isReady: amIReady
+    });
+});
+
+// 5. Render the Public Board
+function renderPublicBoard() {
+    if (!globalState || !globalState.players) return;
+
+    const players = Object.values(globalState.players);
+    const allReady = players.length === 6 && players.every(p => p.isReady);
+
+    publicBoard.innerHTML = "";
+
+    if (!allReady) {
+        // Show Waiting List
+        players.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = `status-row ${p.team}`;
+            div.innerHTML = `
+                <span>${p.name || `Player ${i+1}`} (Lvl ${p.level})</span>
+                <span class="${p.isReady ? 'status-ready' : 'status-waiting'}">
+                    ${p.isReady ? 'Readied' : 'Thinking...'}
+                </span>
+            `;
+            publicBoard.appendChild(div);
+        });
+    } else {
+        // EVERYONE IS READY: Calculate and show order
+        const orderedTurn = calculateTurnOrder(players, globalState.coin);
+        
+        orderedTurn.forEach((slot, index) => {
+            const div = document.createElement('div');
+            div.className = `status-row ${slot.team}`;
+            div.innerHTML = `
+                <span><strong>${index + 1}.</strong> ${slot.name} (Lvl ${slot.level})</span>
+                <span>Init: <strong>${slot.total}</strong></span>
+            `;
+            publicBoard.appendChild(div);
+        });
+    }
+}
+
+// 6. The Interleaving Tie-Breaker Algorithm
+function calculateTurnOrder(players, currentCoin) {
+    let grouped = {};
+    players.forEach(p => {
+        if(!grouped[p.totalInit]) grouped[p.totalInit] = { red: [], blue: [] };
+        grouped[p.totalInit][p.team].push(p);
+    });
+    
+    let sortedTotals = Object.keys(grouped).map(Number).sort((a,b) => b-a);
+    let finalOrder = [];
+    let tempCoin = currentCoin;
+    
+    sortedTotals.forEach(total => {
+        let reds = grouped[total].red;
+        let blues = grouped[total].blue;
+        
+        // Format names for same-team ties (e.g., "Player 1 OR Player 2")
+        let redNameFormat = reds.map(p => p.name).join(" OR ");
+        let redLevelFormat = reds.map(p => p.level).join("/");
+        let blueNameFormat = blues.map(p => p.name).join(" OR ");
+        let blueLevelFormat = blues.map(p => p.level).join("/");
+
+        let remainingReds = reds.length;
+        let remainingBlues = blues.length;
+
+        while(remainingReds > 0 || remainingBlues > 0) {
+            if (remainingReds > 0 && remainingBlues > 0) {
+                // Opposing teams tied! Team with coin goes, then coin flips.
+                if (tempCoin === 'red') {
+                    finalOrder.push({ name: redNameFormat, team: 'red', total: total, level: redLevelFormat });
+                    remainingReds--;
+                    tempCoin = 'blue';
+                } else {
+                    finalOrder.push({ name: blueNameFormat, team: 'blue', total: total, level: blueLevelFormat });
+                    remainingBlues--;
+                    tempCoin = 'red';
+                }
+            } else if (remainingReds > 0) {
+                finalOrder.push({ name: redNameFormat, team: 'red', total: total, level: redLevelFormat });
+                remainingReds--;
+            } else if (remainingBlues > 0) {
+                finalOrder.push({ name: blueNameFormat, team: 'blue', total: total, level: blueLevelFormat });
+                remainingBlues--;
             }
-            flipCoin();
         }
-        i = j;
-    }
-
-    // Display top-to-bottom with ordinals
-    turnOrderList.innerHTML = "";
-    const ordinals = ["1st", "2nd", "3rd", "4th", "5th", "6th"];
-    finalOrder.forEach((p, index) => {
-        const li = document.createElement("li");
-        li.textContent = `${ordinals[index]}: Player ${p.slot + 1} - ${p.name} (Level ${p.level}, Team ${p.team.toUpperCase()}) - Total: ${p.total}`;
-        li.style.color = p.team === "red" ? "#ff4d4d" : "#66ccff";
-        li.setAttribute("data-team", p.team);
-        turnOrderList.appendChild(li);
     });
-
-    // Reset for next turn
-    playersArray.forEach(p => {
-        playersRef.child(p.slot).update({ card: 0, ready: false });
-    });
+    
+    return finalOrder;
 }
 
-// Flip coin
-function flipCoin() {
-    coinSide = coinSide === "red" ? "blue" : "red";
-    coinHistory.push(coinSide);
-    coinRef.set({ side: coinSide, history: coinHistory });
-}
-
-// Multi-device sync
-playersRef.on("value", updatePublicStatus);
-coinRef.on("value", snapshot => {
-    const coinData = snapshot.val();
-    if (coinData) {
-        coinSide = coinData.side;
-        coinHistory = coinData.history || [coinSide];
-        coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
+// 7. New Game Reset
+newGameBtn.addEventListener('click', () => {
+    if(!confirm("Reset the entire game for everyone?")) return;
+    
+    const initialPlayers = {};
+    for(let i=1; i<=6; i++) {
+        initialPlayers[`p${i}`] = {
+            name: `Player ${i}`,
+            team: i <= 3 ? 'red' : 'blue',
+            cardInit: 0,
+            booster: 0,
+            level: 1,
+            totalInit: 0,
+            isReady: false
+        };
     }
+
+    set(ref(db, 'game'), {
+        coin: Math.random() > 0.5 ? 'red' : 'blue',
+        players: initialPlayers
+    });
+
+    // Reset local inputs
+    cardInitInput.value = 0;
+    boosterInput.value = 0;
+    levelInput.value = 1;
+    totalDisp.innerText = 0;
 });
