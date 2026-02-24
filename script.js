@@ -15,13 +15,13 @@ const playersRef = db.ref("players");
 const coinRef = db.ref("coin");
 
 // Global variables
-let playerSlot = null;  // no default assignment
+let playerSlot = null;
 let coinSide = "red";
 let coinHistory = [];
 const turnOrderList = document.getElementById("turnOrderList");
 const coinLabel = document.getElementById("coinLabel");
 
-// Initialize players in Firebase if not exists
+// Initialize Firebase players if not exist
 playersRef.once("value", snapshot => {
     if(!snapshot.exists()) {
         const initialPlayers = {};
@@ -30,31 +30,13 @@ playersRef.once("value", snapshot => {
         }
         playersRef.set(initialPlayers);
     }
-    updatePlayerDropdown();
 });
 
-// Populate player dropdown
-function updatePlayerDropdown() {
-    const dropdown = document.getElementById("playerSlot");
-    // keep placeholder -- Choose Player --
-    playersRef.once("value", snapshot=>{
-        const data = snapshot.val() || {};
-        for(let i=0;i<6;i++){
-            const p = data[i];
-            const option = document.createElement("option");
-            option.value = i;
-            option.textContent = `Player ${i+1} – [${p.team.toUpperCase()}] – ${p.name}`;
-            dropdown.appendChild(option);
-        }
-    });
-}
-
-// Player slot selection
+// Load saved info when player selects slot
 document.getElementById("playerSlot").addEventListener("change", e=>{
-    if(e.target.value === "") return; // not selected yet
+    if(e.target.value === "") return;
     playerSlot = parseInt(e.target.value);
 
-    // Load current info
     playersRef.child(playerSlot).once("value").then(snapshot=>{
         const p = snapshot.val();
         document.getElementById("playerName").value = p.name;
@@ -87,18 +69,17 @@ document.getElementById("newGameButton").addEventListener("click", ()=>{
             playersRef.child(i).update({ card:0, level:1, ready:false });
         }
     });
-    updatePlayerDropdown();
     updatePublicStatus();
 });
 
-// Update public status
+// Update public section
 function updatePublicStatus(){
     playersRef.once("value").then(snapshot=>{
         const data = snapshot.val() || {};
         const allReady = Object.values(data).every(p=>p.ready);
-        turnOrderList.innerHTML = "";
+        turnOrderList.innerHTML="";
 
-        // Show coin and ready status
+        // Show coin and history
         coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
 
         if(!allReady){
@@ -121,7 +102,7 @@ function calculateTurnOrder(playersArray){
     playersArray.sort((a,b)=>b.total - a.total);
 
     const finalOrder = [];
-    let i = 0;
+    let i=0;
     while(i<playersArray.length){
         let tieGroup = [playersArray[i]];
         let j=i+1;
@@ -149,39 +130,37 @@ function calculateTurnOrder(playersArray){
         i=j;
     }
 
-    // Display turn order top-to-bottom with ordinals
+    // Display top-to-bottom with ordinals
     turnOrderList.innerHTML="";
+    const ordinals = ["1st","2nd","3rd","4th","5th","6th"];
     finalOrder.forEach((p,index)=>{
-        const li=document.createElement("li");
-        const ordinals = ["1st","2nd","3rd","4th","5th","6th"];
+        const li = document.createElement("li");
         li.textContent = `${ordinals[index]}: Player ${p.slot+1} - ${p.name} (Level ${p.level}, Team ${p.team.toUpperCase()}) - Total: ${p.total}`;
         li.style.color = p.team==="red"? "#ff4d4d":"#66ccff";
         li.setAttribute("data-team", p.team);
         turnOrderList.appendChild(li);
     });
 
-    // Reset card initiatives and ready for next turn
+    // Reset for next turn
     playersArray.forEach(p=>{
         playersRef.child(p.slot).update({ card:0, ready:false });
     });
-
-    updatePlayerDropdown();
 }
 
-// Flip coin function
+// Flip coin
 function flipCoin(){
     coinSide = coinSide==="red"?"blue":"red";
     coinHistory.push(coinSide);
     coinRef.set({ side:coinSide, history:coinHistory });
 }
 
-// Listen for updates for multi-device sync
+// Multi-device sync
 playersRef.on("value", updatePublicStatus);
 coinRef.on("value", snapshot=>{
     const coinData = snapshot.val();
     if(coinData){
-        coinSide=coinData.side;
-        coinHistory=coinData.history||[coinSide];
+        coinSide = coinData.side;
+        coinHistory = coinData.history || [coinSide];
         coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
     }
 });
