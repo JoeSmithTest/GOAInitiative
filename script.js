@@ -15,7 +15,7 @@ const playersRef = db.ref("players");
 const coinRef = db.ref("coin");
 
 // Global variables
-let playerSlot = null;  // no default
+let playerSlot = null;  // no default assignment
 let coinSide = "red";
 let coinHistory = [];
 const turnOrderList = document.getElementById("turnOrderList");
@@ -33,17 +33,10 @@ playersRef.once("value", snapshot => {
     updatePlayerDropdown();
 });
 
-// Update dropdown
+// Populate player dropdown
 function updatePlayerDropdown() {
     const dropdown = document.getElementById("playerSlot");
-    dropdown.innerHTML = "";
-
-    // Default "Choose Player" option
-    const defaultOption = document.createElement("option");
-    defaultOption.value = "";
-    defaultOption.textContent = "-- Choose Player --";
-    dropdown.appendChild(defaultOption);
-
+    // keep placeholder -- Choose Player --
     playersRef.once("value", snapshot=>{
         const data = snapshot.val() || {};
         for(let i=0;i<6;i++){
@@ -58,9 +51,10 @@ function updatePlayerDropdown() {
 
 // Player slot selection
 document.getElementById("playerSlot").addEventListener("change", e=>{
-    if(e.target.value==="") return; // no player selected yet
+    if(e.target.value === "") return; // not selected yet
     playerSlot = parseInt(e.target.value);
 
+    // Load current info
     playersRef.child(playerSlot).once("value").then(snapshot=>{
         const p = snapshot.val();
         document.getElementById("playerName").value = p.name;
@@ -89,7 +83,6 @@ document.getElementById("newGameButton").addEventListener("click", ()=>{
     coinRef.set({ side: coinSide, history: coinHistory });
 
     playersRef.once("value").then(snapshot=>{
-        const data = snapshot.val() || {};
         for(let i=0;i<6;i++){
             playersRef.child(i).update({ card:0, level:1, ready:false });
         }
@@ -98,7 +91,7 @@ document.getElementById("newGameButton").addEventListener("click", ()=>{
     updatePublicStatus();
 });
 
-// Update public status (ready + turn order if all ready)
+// Update public status
 function updatePublicStatus(){
     playersRef.once("value").then(snapshot=>{
         const data = snapshot.val() || {};
@@ -108,7 +101,6 @@ function updatePublicStatus(){
         // Show coin and ready status
         coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
 
-        // Show all players with ready/waiting if not all ready
         if(!allReady){
             Object.values(data).forEach(p=>{
                 const li = document.createElement("li");
@@ -123,7 +115,7 @@ function updatePublicStatus(){
     });
 }
 
-// Calculate turn order with tie-breaker coin
+// Calculate turn order with tie-breaker
 function calculateTurnOrder(playersArray){
     playersArray.forEach(p=>p.total=(p.card||0)+(p.booster||0));
     playersArray.sort((a,b)=>b.total - a.total);
@@ -183,7 +175,7 @@ function flipCoin(){
     coinRef.set({ side:coinSide, history:coinHistory });
 }
 
-// Listen for updates to keep multiple devices in sync
+// Listen for updates for multi-device sync
 playersRef.on("value", updatePublicStatus);
 coinRef.on("value", snapshot=>{
     const coinData = snapshot.val();
