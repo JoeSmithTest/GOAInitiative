@@ -1,13 +1,14 @@
 body {
     font-family: 'Georgia', serif;
-    background: linear-gradient(to bottom, #e0eafc, #cfdef3);
+    background-color: #000; /* back to black background */
+    color: #fff;
     margin: 10px;
     padding: 10px;
 }
 
 h1, h2 {
     text-align: center;
-    color: #4b0082;
+    color: #ffcc00; /* fantasy/gold */
 }
 
 label, input, select, button {
@@ -32,11 +33,6 @@ button:hover {
 ul {
     list-style-type: none;
     padding-left: 0;
-}
-
-li {
-    margin: 4px 0;
-    font-weight: bold;
 }
 
 li[data-team="red"] { color: #ff4d4d; }
