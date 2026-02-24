@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GOA Initiative Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script>
+      // Firebase config — replace YOUR_ values with your project’s actual keys
+      const firebaseConfig = {
+    	apiKey: "AIzaSyDJTX2FXoNbsJvoLoYmgDtXzYsKem4rYWE",
+    	authDomain: "goainitiative.firebaseapp.com",
+    	databaseURL: "https://goainitiative-default-rtdb.firebaseio.com",
+    	projectId: "goainitiative",
+    	storageBucket: "goainitiative.firebasestorage.app",
+    	messagingSenderId: "447333808415",
+    	appId: "1:447333808415:web:46c4acd8193a7b76b4982a"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+    </script>
+</head>
+<body>
+    <h1>Guardians of Atlantis Initiative Tracker</h1>
+
+    <!-- Private Input Section -->
+    <div id="privateSection">
+        <h2>Your Info</h2>
+        <label for="playerName">Name:</label>
+        <input type="text" id="playerName" placeholder="Your character name"><br>
+
+        <label for="playerTeam">Team:</label>
+        <select id="playerTeam">
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+        </select><br>
+
+        <label for="playerLevel">Level:</label>
+        <input type="number" id="playerLevel" min="1" value="1"><br>
+        <small>To level up to next level, it costs the amount of your current level. E.g. Cost 3 coins to go from level 3 to 4.</small><br>
+
+        <label for="playerBooster">Initiative Booster:</label>
+        <input type="number" id="playerBooster" min="0" value="0"><br>
+
+        <label for="playerCard">Current Card Initiative:</label>
+        <input type="number" id="playerCard" min="0" value="0"><br>
+
+        <button id="readyButton">Ready</button>
+        <p id="privateMessage"></p>
+    </div>
+
+    <!-- Public Turn Order Section -->
+    <div id="publicSection">
+        <h2>Turn Order</h2>
+        <div id="coinContainer">
+            <span id="coinLabel">Tie-breaker Coin:</span>
+            <div id="coin" style="width:40px; height:40px; border-radius:50%; display:inline-block;"></div>
+        </div>
+        <ul id="turnOrderList"></ul>
+    </div>
+
+    <!-- Your game logic script -->
+    <script src="script.js"></script>
+</body>
+</html>
