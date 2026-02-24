@@ -3,13 +3,13 @@ import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/
 
 // TODO: Replace this with your actual Firebase config later
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDJTX2FXoNbsJvoLoYmgDtXzYsKem4rYWE",
+  authDomain: "goainitiative.firebaseapp.com",
+  databaseURL: "https://goainitiative-default-rtdb.firebaseio.com",
+  projectId: "goainitiative",
+  storageBucket: "goainitiative.firebasestorage.app",
+  messagingSenderId: "447333808415",
+  appId: "1:447333808415:web:46c4acd8193a7b76b4982a"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -219,3 +219,4 @@ newGameBtn.addEventListener('click', () => {
     levelInput.value = 1;
     totalDisp.innerText = 0;
 });
+
