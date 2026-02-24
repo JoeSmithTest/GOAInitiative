@@ -10,15 +10,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
     <script>
-      // Firebase config — replace YOUR_ values with your project’s actual keys
+      // Firebase config — replace YOUR_ values with your project’s keys
       const firebaseConfig = {
-    	apiKey: "AIzaSyDJTX2FXoNbsJvoLoYmgDtXzYsKem4rYWE",
-    	authDomain: "goainitiative.firebaseapp.com",
-    	databaseURL: "https://goainitiative-default-rtdb.firebaseio.com",
-    	projectId: "goainitiative",
-    	storageBucket: "goainitiative.firebasestorage.app",
-    	messagingSenderId: "447333808415",
-    	appId: "1:447333808415:web:46c4acd8193a7b76b4982a"
+        apiKey: "YOUR_API_KEY",
+        authDomain: "GOAInitiative.firebaseapp.com",
+        databaseURL: "https://GOAInitiative-default-rtdb.firebaseio.com",
+        projectId: "GOAInitiative",
+        storageBucket: "GOAInitiative.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
@@ -30,6 +30,8 @@
     <!-- Private Input Section -->
     <div id="privateSection">
         <h2>Your Info</h2>
+        <p id="playerNumber"></p>
+
         <label for="playerName">Name:</label>
         <input type="text" id="playerName" placeholder="Your character name"><br>
 
@@ -38,6 +40,7 @@
             <option value="red">Red</option>
             <option value="blue">Blue</option>
         </select><br>
+        <small>Game format: 3 Red vs 3 Blue</small><br>
 
         <label for="playerLevel">Level:</label>
         <input type="number" id="playerLevel" min="1" value="1"><br>
@@ -55,15 +58,14 @@
 
     <!-- Public Turn Order Section -->
     <div id="publicSection">
-        <h2>Turn Order</h2>
+        <h2>Turn Order / Player Status</h2>
         <div id="coinContainer">
             <span id="coinLabel">Tie-breaker Coin:</span>
-            <div id="coin" style="width:40px; height:40px; border-radius:50%; display:inline-block;"></div>
+            <div id="coin"></div>
         </div>
         <ul id="turnOrderList"></ul>
     </div>
 
-    <!-- Your game logic script -->
     <script src="script.js"></script>
 </body>
 </html>

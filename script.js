@@ -1,4 +1,4 @@
-// Firebase reference paths
+// Firebase references
 const playersRef = db.ref("players");
 const coinRef = db.ref("coin");
 
@@ -10,6 +10,7 @@ const playerBoosterInput = document.getElementById("playerBooster");
 const playerCardInput = document.getElementById("playerCard");
 const readyButton = document.getElementById("readyButton");
 const privateMessage = document.getElementById("privateMessage");
+const playerNumberEl = document.getElementById("playerNumber");
 const turnOrderList = document.getElementById("turnOrderList");
 const coinDiv = document.getElementById("coin");
 const coinLabel = document.getElementById("coinLabel");
@@ -18,23 +19,7 @@ let playerId = null;
 let coinSide = "red";
 let coinHistory = [];
 
-// Assign a player slot when first connecting
-playersRef.once("value", snapshot => {
-    const data = snapshot.val() || {};
-    // Find first empty slot (0-7)
-    for (let i = 0; i < 8; i++) {
-        if (!data[i]) {
-            playerId = i;
-            break;
-        }
-    }
-    if (playerId === null) {
-        privateMessage.textContent = "All player slots are full!";
-        readyButton.disabled = true;
-    }
-});
-
-// Initialize coin if not exists
+// Initialize tie-breaker coin if missing
 coinRef.once("value", snapshot => {
     if (!snapshot.exists()) {
         coinRef.set({ side: "red", history: ["red"] });
@@ -46,62 +31,107 @@ coinRef.on("value", snapshot => {
     const coinData = snapshot.val();
     coinSide = coinData.side;
     coinHistory = coinData.history || [];
-    updateCoinDisplay();
-});
-
-function updateCoinDisplay() {
     coinDiv.style.backgroundColor = coinSide;
     coinLabel.textContent = `Tie-breaker Coin: ${coinSide.toUpperCase()} | History: ${coinHistory.join(" → ")}`;
-}
+});
 
-// Handle ready button
+// Initialize 6 player slots if missing
+function initializePlayers() {
+    playersRef.once("value", snapshot => {
+        const data = snapshot.val() || {};
+        for (let i = 0; i < 6; i++) {
+            if (!data[i]) {
+                playersRef.child(i).set({
+                    name: `Player${i+1}`,
+                    team: (i < 3) ? "red" : "blue",
+                    level: 1,
+                    booster: 0,
+                    card: 0,
+                    ready: false,
+                    slot: i
+                });
+            }
+        }
+    });
+}
+initializePlayers();
+
+// Assign player slot and number
+playersRef.once("value", snapshot => {
+    const data = snapshot.val() || {};
+    const teamCounts = { red: 0, blue: 0 };
+
+    Object.values(data).forEach(p => {
+        if (p.team === "red") teamCounts.red++;
+        else if (p.team === "blue") teamCounts.blue++;
+    });
+
+    let teamSelected = playerTeamInput.value;
+    if (teamCounts[teamSelected] >= 3) {
+        privateMessage.textContent = `${teamSelected.toUpperCase()} team full! Choose the other team.`;
+        readyButton.disabled = true;
+        return;
+    }
+
+    for (let i = 0; i < 6; i++) {
+        if (!data[i]) {
+            playerId = i;
+            break;
+        }
+    }
+
+    if (playerId === null) {
+        privateMessage.textContent = "All player slots are full!";
+        readyButton.disabled = true;
+        return;
+    }
+
+    playerNumberEl.textContent = `Your Player Number: ${playerId+1}`;
+});
+
+// Ready button logic
 readyButton.addEventListener("click", () => {
-    if (!playerId) return;
-    const playerData = {
+    if (playerId === null) return;
+    playersRef.child(playerId).set({
         name: playerNameInput.value || `Player${playerId+1}`,
         team: playerTeamInput.value,
         level: parseInt(playerLevelInput.value) || 1,
         booster: parseInt(playerBoosterInput.value) || 0,
         card: parseInt(playerCardInput.value) || 0,
-        ready: true
-    };
-    playersRef.child(playerId).set(playerData);
+        ready: true,
+        slot: playerId
+    });
     privateMessage.textContent = "You are ready!";
 });
 
-// Listen to all players for real-time updates
+// Listen to all players and update public section
 playersRef.on("value", snapshot => {
     const data = snapshot.val() || {};
     const playersArray = Object.values(data);
-    
-    // Update readiness in public turn order
-    let allReady = true;
-    playersArray.forEach(p => { if (!p.ready) allReady = false; });
+    playersArray.sort((a,b) => a.slot - b.slot);
 
-    // If all ready, calculate turn order
+    turnOrderList.innerHTML = "";
+    let allReady = true;
+
+    playersArray.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = `Player ${p.slot+1}: ${p.name} (${p.team.toUpperCase()}) - ${p.ready ? "Ready ✅" : "Waiting ⏳"}`;
+        li.style.color = p.team;
+        turnOrderList.appendChild(li);
+
+        if (!p.ready) allReady = false;
+    });
+
     if (allReady && playersArray.length > 0) {
         calculateTurnOrder(playersArray);
-    } else {
-        // Show readiness status
-        turnOrderList.innerHTML = "";
-        playersArray.forEach(p => {
-            const li = document.createElement("li");
-            li.textContent = `${p.name} (${p.team.toUpperCase()}) - ${p.ready ? "Ready ✅" : "Waiting ⏳"}`;
-            li.style.color = p.team;
-            turnOrderList.appendChild(li);
-        });
     }
 });
 
 // Calculate turn order with tie-breakers
 function calculateTurnOrder(playersArray) {
-    // Compute total initiative
     playersArray.forEach(p => p.total = (p.card || 0) + (p.booster || 0));
+    playersArray.sort((a,b) => b.total - a.total);
 
-    // Sort descending
-    playersArray.sort((a, b) => b.total - a.total);
-
-    // Handle tie-breakers
     let finalOrder = [];
     let i = 0;
     while (i < playersArray.length) {
@@ -112,13 +142,10 @@ function calculateTurnOrder(playersArray) {
             j++;
         }
 
-        // Check if tieGroup has mixed teams
         const teams = new Set(tieGroup.map(p => p.team));
         if (teams.size === 1) {
-            // Same team, just list all in order with "or"
             tieGroup.forEach(p => finalOrder.push(p));
         } else {
-            // Mixed teams, apply coin
             const redPlayers = tieGroup.filter(p => p.team === "red");
             const bluePlayers = tieGroup.filter(p => p.team === "blue");
             if (coinSide === "red") {
@@ -134,18 +161,18 @@ function calculateTurnOrder(playersArray) {
         i = j;
     }
 
-    // Update public turn order list
+    // Update public section with turn numbers
     turnOrderList.innerHTML = "";
-    finalOrder.forEach(p => {
+    finalOrder.forEach((p,index) => {
         const li = document.createElement("li");
-        li.textContent = `${p.name} (Level ${p.level}) - Total: ${p.total}`;
+        li.textContent = `Turn ${index+1}: Player ${p.slot+1} - ${p.name} (Level ${p.level}) - Total: ${p.total}`;
         li.style.color = p.team;
         turnOrderList.appendChild(li);
     });
 
-    // Reset card initiative for next round but keep everything else
+    // Reset card initiative and readiness for next turn
     playersArray.forEach(p => {
-        playersRef.child(getPlayerIdByName(p.name)).update({ card: 0, ready: false });
+        playersRef.child(p.slot).update({ card: 0, ready: false });
     });
 }
 
@@ -154,9 +181,4 @@ function flipCoin() {
     coinSide = (coinSide === "red") ? "blue" : "red";
     coinHistory.push(coinSide);
     coinRef.set({ side: coinSide, history: coinHistory });
-}
-
-// Helper to find player ID by name
-function getPlayerIdByName(name) {
-    return Object.entries(db.ref("players")).find(([id, val]) => val.name === name)?.[0];
 }

@@ -1,128 +1,59 @@
-/* GENERAL BODY */
 body {
-    font-family: 'Georgia', serif;
-    background: linear-gradient(to bottom, #1a1a2e, #162447);
-    color: #f0f0f0;
-    margin: 0;
+    font-family: 'Trebuchet MS', sans-serif;
+    background: linear-gradient(to bottom, #0d0d2b, #001a33);
+    color: #eee;
     padding: 10px;
 }
 
-/* HEADINGS */
 h1, h2 {
     text-align: center;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-    margin-bottom: 10px;
+    color: #ffd700;
 }
 
-/* PRIVATE SECTION */
-#privateSection {
-    background: rgba(0, 0, 0, 0.6);
-    border: 2px solid #f0f0f0;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-#privateSection label {
-    display: inline-block;
-    width: 140px;
-    margin-top: 5px;
-}
-
-#privateSection input, #privateSection select {
-    width: calc(100% - 150px);
-    padding: 5px;
-    border-radius: 6px;
-    border: none;
-    margin-bottom: 5px;
-}
-
-#readyButton {
-    background: linear-gradient(135deg, #ff416c, #ff4b2b);
-    border: none;
+#privateSection, #publicSection {
+    background-color: rgba(0,0,0,0.5);
+    border: 2px solid #444;
     border-radius: 10px;
-    padding: 8px 16px;
-    color: white;
+    padding: 10px;
+    margin: 10px auto;
+    max-width: 400px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 5px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    background-color: #444;
+    color: #ffd700;
     font-weight: bold;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    margin-top: 10px;
 }
 
-#readyButton:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #ff4b2b;
+button:hover {
+    background-color: #666;
 }
 
-#privateMessage {
-    margin-top: 8px;
-    font-weight: bold;
-}
-
-/* PUBLIC SECTION */
-#publicSection {
-    background: rgba(20, 20, 40, 0.7);
-    border: 2px solid #f0f0f0;
-    border-radius: 12px;
-    padding: 15px;
-}
-
-/* TURN ORDER LIST */
-#turnOrderList {
-    list-style: none;
-    padding: 0;
-    margin-top: 10px;
-}
-
-#turnOrderList li {
-    padding: 6px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-    font-size: 1.1em;
-    font-weight: bold;
-    border-radius: 6px;
-}
-
-/* COIN CONTAINER */
 #coinContainer {
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
+    justify-content: center;
+    margin: 10px;
 }
 
-#coinLabel {
-    margin-right: 10px;
-    font-weight: bold;
-}
-
-/* Tie-breaker coin style */
 #coin {
-    width: 40px;
-    height: 40px;
+    width: 25px;
+    height: 25px;
     border-radius: 50%;
-    border: 2px solid #f0f0f0;
-    box-shadow: 0 0 15px rgba(255,255,255,0.5);
-    transition: background-color 0.3s, box-shadow 0.3s;
+    margin-left: 10px;
+    border: 2px solid #fff;
 }
 
-/* TEAM COLORS (for turn order) */
-.red {
-    color: #ff4b2b;
-}
-
-.blue {
-    color: #4b9cff;
-}
-
-/* MOBILE RESPONSIVE */
-@media screen and (max-width: 600px) {
-    #privateSection label, #privateSection input, #privateSection select {
-        display: block;
-        width: 100%;
-    }
-    #privateSection input, #privateSection select {
-        margin-bottom: 10px;
-    }
-    #coinContainer {
-        justify-content: center;
-    }
+li {
+    margin: 5px 0;
+    font-weight: bold;
 }
