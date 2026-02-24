@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Atlantis Initiative Tracker</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=MedievalSharp&display=swap" rel="stylesheet">
@@ -11,12 +11,12 @@
     <div class="app-container">
         <section class="public-section">
             <h2 class="section-title">The Oracle's Vision</h2>
-            <div id="coin-display" class="coin red">RED TIE-BREAKER</div>
+            <div id="coin-display" class="coin">DETERMINING COIN...</div>
             
             <div id="public-board">
                 </div>
 
-            <button id="new-game-btn" class="danger-btn">Reset New Game</button>
+            <button id="new-game-btn" class="danger-btn">RESET NEW GAME</button>
         </section>
 
         <hr class="mystic-divider">
@@ -25,15 +25,15 @@
             <h2 class="section-title">Your Sanctum</h2>
             
             <div class="input-group">
-                <label>Select Guardian Seat</label>
+                <label>Guardian Seat</label>
                 <select id="player-select">
-                    <option value="" disabled selected>Choose your seat...</option>
-                    <option value="p1">Player 1 (Red Team)</option>
-                    <option value="p2">Player 2 (Red Team)</option>
-                    <option value="p3">Player 3 (Red Team)</option>
-                    <option value="p4">Player 4 (Blue Team)</option>
-                    <option value="p5">Player 5 (Blue Team)</option>
-                    <option value="p6">Player 6 (Blue Team)</option>
+                    <option value="" disabled selected>Select Player Number...</option>
+                    <option value="p1">Player 1 (Red)</option>
+                    <option value="p2">Player 2 (Red)</option>
+                    <option value="p3">Player 3 (Red)</option>
+                    <option value="p4">Player 4 (Blue)</option>
+                    <option value="p5">Player 5 (Blue)</option>
+                    <option value="p6">Player 6 (Blue)</option>
                 </select>
             </div>
 
@@ -44,11 +44,11 @@
 
             <div class="stats-grid">
                 <div class="stat-box">
-                    <label>Card Initiative</label>
+                    <label>Card Init</label>
                     <input type="number" id="card-init" value="0">
                 </div>
                 <div class="stat-box">
-                    <label>Booster (+)</label>
+                    <label>Booster</label>
                     <input type="number" id="booster" value="0">
                 </div>
                 <div class="stat-box">
@@ -58,7 +58,7 @@
             </div>
 
             <div class="total-display">
-                Current Total: <span id="total-val">0</span>
+                TOTAL INITIATIVE: <span id="total-val">0</span>
             </div>
 
             <button id="ready-btn">READY UP</button>
