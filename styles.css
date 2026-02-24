@@ -1,59 +1,50 @@
 body {
-    font-family: 'Trebuchet MS', sans-serif;
-    background: linear-gradient(to bottom, #0d0d2b, #001a33);
-    color: #eee;
+    font-family: 'Georgia', serif;
+    background: linear-gradient(to bottom, #e0eafc, #cfdef3);
+    margin: 10px;
     padding: 10px;
 }
 
 h1, h2 {
     text-align: center;
-    color: #ffd700;
+    color: #4b0082;
 }
 
-#privateSection, #publicSection {
-    background-color: rgba(0,0,0,0.5);
-    border: 2px solid #444;
-    border-radius: 10px;
-    padding: 10px;
-    margin: 10px auto;
-    max-width: 400px;
-}
-
-input, select, button {
-    width: 100%;
-    padding: 5px;
+label, input, select, button {
+    display: block;
     margin: 5px 0;
-    border-radius: 5px;
-    border: none;
+    font-size: 1em;
 }
 
 button {
-    background-color: #444;
-    color: #ffd700;
-    font-weight: bold;
+    background-color: #4b0082;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
     cursor: pointer;
 }
 
 button:hover {
-    background-color: #666;
+    background-color: #6a0dad;
 }
 
-#coinContainer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 10px;
-}
-
-#coin {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    margin-left: 10px;
-    border: 2px solid #fff;
+ul {
+    list-style-type: none;
+    padding-left: 0;
 }
 
 li {
-    margin: 5px 0;
+    margin: 4px 0;
     font-weight: bold;
+}
+
+li[data-team="red"] { color: #ff4d4d; }
+li[data-team="blue"] { color: #66ccff; }
+
+#coinDiv {
+    text-align: center;
+    margin: 10px 0;
+    font-weight: bold;
+    padding: 5px;
 }
